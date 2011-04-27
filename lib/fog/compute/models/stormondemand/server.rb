@@ -37,10 +37,9 @@ module Fog
           load(data)
         end
 
-        def delete(uniq_id = '')
+        def delete
           requires :identity
-          uniq_id ||= identity
-          connection.delete_server(:uniq_id => uniq_id)
+          connection.delete_server(:uniq_id => identity)
           true
         end
 
