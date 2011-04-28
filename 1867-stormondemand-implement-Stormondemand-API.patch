@@ -1,0 +1,1287 @@
+From 0909691144f7d19a280d8fb51d98be74e042956c Mon Sep 17 00:00:00 2001
+From: seeingidog <ian@ruby-code.com>
+Date: Wed, 27 Apr 2011 17:51:45 -0400
+Subject: [PATCH 1867/1867] [stormondemand] implement Stormondemand API
+
+---
+ lib/fog/bin.rb                                     |    1 +
+ lib/fog/bin/stormondemand.rb                       |   30 +++++
+ lib/fog/compute.rb                                 |    3 +
+ lib/fog/compute/models/stormondemand/balancer.rb   |   38 ++++++
+ lib/fog/compute/models/stormondemand/balancers.rb  |   21 ++++
+ lib/fog/compute/models/stormondemand/config.rb     |   25 ++++
+ lib/fog/compute/models/stormondemand/configs.rb    |   22 ++++
+ .../compute/models/stormondemand/create_server.rb  |   19 +++
+ lib/fog/compute/models/stormondemand/image.rb      |   20 +++
+ lib/fog/compute/models/stormondemand/images.rb     |   21 ++++
+ lib/fog/compute/models/stormondemand/private_ip.rb |   19 +++
+ .../compute/models/stormondemand/private_ips.rb    |   31 +++++
+ lib/fog/compute/models/stormondemand/server.rb     |   75 ++++++++++++
+ lib/fog/compute/models/stormondemand/servers.rb    |   26 ++++
+ lib/fog/compute/models/stormondemand/stat.rb       |   23 ++++
+ lib/fog/compute/models/stormondemand/stats.rb      |   22 ++++
+ lib/fog/compute/models/stormondemand/template.rb   |   22 ++++
+ lib/fog/compute/models/stormondemand/templates.rb  |   21 ++++
+ .../requests/stormondemand/add_balancer_node.rb    |   19 +++
+ .../compute/requests/stormondemand/clone_server.rb |   19 +++
+ .../requests/stormondemand/create_server.rb        |   19 +++
+ .../requests/stormondemand/delete_server.rb        |   19 +++
+ .../compute/requests/stormondemand/get_server.rb   |   19 +++
+ .../compute/requests/stormondemand/get_stats.rb    |   19 +++
+ .../requests/stormondemand/list_balancers.rb       |   19 +++
+ .../compute/requests/stormondemand/list_configs.rb |   19 +++
+ .../compute/requests/stormondemand/list_images.rb  |   19 +++
+ .../requests/stormondemand/list_private_ips.rb     |   19 +++
+ .../compute/requests/stormondemand/list_servers.rb |   19 +++
+ .../requests/stormondemand/list_templates.rb       |   19 +++
+ .../requests/stormondemand/reboot_server.rb        |   19 +++
+ .../requests/stormondemand/remove_balancer_node.rb |   19 +++
+ .../requests/stormondemand/resize_server.rb        |   19 +++
+ lib/fog/compute/stormondemand.rb                   |  124 ++++++++++++++++++++
+ lib/fog/core/credentials.rb                        |    2 +
+ lib/fog/providers.rb                               |    1 +
+ lib/fog/providers/stormondemand.rb                 |   12 ++
+ .../compute/requests/stormondemand/server_tests.rb |   62 ++++++++++
+ tests/helper.rb                                    |    2 +-
+ 39 files changed, 926 insertions(+), 1 deletions(-)
+ create mode 100644 lib/fog/bin/stormondemand.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/balancer.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/balancers.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/config.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/configs.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/create_server.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/image.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/images.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/private_ip.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/private_ips.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/server.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/servers.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/stat.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/stats.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/template.rb
+ create mode 100644 lib/fog/compute/models/stormondemand/templates.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/add_balancer_node.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/clone_server.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/create_server.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/delete_server.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/get_server.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/get_stats.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/list_balancers.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/list_configs.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/list_images.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/list_private_ips.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/list_servers.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/list_templates.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/reboot_server.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/remove_balancer_node.rb
+ create mode 100644 lib/fog/compute/requests/stormondemand/resize_server.rb
+ create mode 100644 lib/fog/compute/stormondemand.rb
+ create mode 100644 lib/fog/providers/stormondemand.rb
+ create mode 100644 tests/compute/requests/stormondemand/server_tests.rb
+
+diff --git a/lib/fog/bin.rb b/lib/fog/bin.rb
+index fae657d..4899aa1 100644
+--- a/lib/fog/bin.rb
++++ b/lib/fog/bin.rb
+@@ -65,6 +65,7 @@ require 'fog/bin/local'
+ require 'fog/bin/new_servers'
+ require 'fog/bin/rackspace'
+ require 'fog/bin/slicehost'
++require 'fog/bin/stormondemand'
+ require 'fog/bin/terremark'
+ require 'fog/bin/virtual_box'
+ require 'fog/bin/voxel'
+diff --git a/lib/fog/bin/stormondemand.rb b/lib/fog/bin/stormondemand.rb
+new file mode 100644
+index 0000000..6c17025
+--- /dev/null
++++ b/lib/fog/bin/stormondemand.rb
+@@ -0,0 +1,30 @@
++class Stormondemand < Fog::Bin
++  class << self
++
++    def class_for(key)
++      case key
++      when :compute
++        Fog::Stormondemand::Compute
++      else 
++        raise ArgumentError, "Unsupported #{self} service: #{key}"
++      end
++    end
++
++    def [](service)
++      @@connections ||= Hash.new do |hash, key|
++        hash[key] = case key
++        when :compute
++          Fog::Compute.new(:provider => 'Stormondemand')
++        else
++          raise ArgumentError, "Unrecognized service: #{key.inspect}"
++        end
++      end
++      @@connections[service]
++    end
++
++    def services
++      Fog::Stormondemand.services
++    end
++
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute.rb b/lib/fog/compute.rb
+index 1508450..e9c2b61 100644
+--- a/lib/fog/compute.rb
++++ b/lib/fog/compute.rb
+@@ -31,6 +31,9 @@ module Fog
+       when 'Slicehost'
+         require 'fog/compute/slicehost'
+         Fog::Slicehost::Compute.new(attributes)
++      when 'Stormondemand'
++        require 'fog/compute/stormondemand'
++        Fog::Stormondemand::Compute.new(attributes)
+       when 'VirtualBox'
+         require 'fog/compute/virtual_box'
+         Fog::VirtualBox::Compute.new(attributes)
+diff --git a/lib/fog/compute/models/stormondemand/balancer.rb b/lib/fog/compute/models/stormondemand/balancer.rb
+new file mode 100644
+index 0000000..3229bed
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/balancer.rb
+@@ -0,0 +1,38 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Balancer < Fog::Model
++        
++        identity :uniq_id
++        
++        attribute :vip
++        attribute :price
++        attribute :name
++        attribute :session_persistence
++        attribute :ssl_termination
++        attribute :strategy
++        attribute :nodes
++        attribute :services
++
++        def initialize(attributes={})
++          super
++        end
++        
++        def add_node(options)
++          requires :identity
++          connection.add_balancer_node({:uniq_id => identity}.merge!(options))
++        end
++        
++        def remove_node(options)
++          requires :identity
++          connection.remove_balancer_node({:uniq_id => identity}.merge!(options))
++        end
++        
++        end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/balancers.rb b/lib/fog/compute/models/stormondemand/balancers.rb
+new file mode 100644
+index 0000000..d2d3a81
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/balancers.rb
+@@ -0,0 +1,21 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/balancer'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Balancers < Fog::Collection
++
++        model Fog::Stormondemand::Compute::Balancer
++
++        def all
++          data = connection.list_balancers.body['loadbalancers']
++          load(data)
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/config.rb b/lib/fog/compute/models/stormondemand/config.rb
+new file mode 100644
+index 0000000..1800f37
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/config.rb
+@@ -0,0 +1,25 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Config < Fog::Model
++        identity :id
++
++        attribute :available
++        attribute :description
++        attribute :disk
++        attribute :featured
++        attribute :memory
++        attribute :price
++        attribute :vcpu
++      end
++
++      def initialize(attributes={})
++        super
++      end
++      
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/configs.rb b/lib/fog/compute/models/stormondemand/configs.rb
+new file mode 100644
+index 0000000..9f91969
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/configs.rb
+@@ -0,0 +1,22 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/config'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Configs < Fog::Collection
++
++        model Fog::Stormondemand::Compute::Config
++
++        def all
++          data = connection.list_configs.body['configs']
++          load(data)
++        end
++
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/create_server.rb b/lib/fog/compute/models/stormondemand/create_server.rb
+new file mode 100644
+index 0000000..603ace7
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/create_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def create_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/create",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/models/stormondemand/image.rb b/lib/fog/compute/models/stormondemand/image.rb
+new file mode 100644
+index 0000000..27b51f4
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/image.rb
+@@ -0,0 +1,20 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Image < Fog::Model
++        identity :id
++        attribute :accnt
++        attribute :name
++        attribute :source_hostname
++        attribute :source_subaccnt
++        attribute :template
++        attribute :template_description
++        attribute :time_taken
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/images.rb b/lib/fog/compute/models/stormondemand/images.rb
+new file mode 100644
+index 0000000..8a80301
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/images.rb
+@@ -0,0 +1,21 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/image'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Images < Fog::Collection
++
++        model Fog::Stormondemand::Compute::Image
++
++        def all
++          data = connection.list_images.body['images']
++          load(data)
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/private_ip.rb b/lib/fog/compute/models/stormondemand/private_ip.rb
+new file mode 100644
+index 0000000..d54007e
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/private_ip.rb
+@@ -0,0 +1,19 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class PrivateIp < Fog::Model
++        attribute :zone
++        attribute :uniq_id
++
++        def initialize(attributes={})
++          super
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/private_ips.rb b/lib/fog/compute/models/stormondemand/private_ips.rb
+new file mode 100644
+index 0000000..f06cd31
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/private_ips.rb
+@@ -0,0 +1,31 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/private_ip'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class PrivateIps < Fog::Collection
++
++        model Fog::Stormondemand::Compute::PrivateIp
++
++        def all
++          data = connection.list_private_ips.body['networks']
++          load(data)
++        end
++
++        def get(server_id)
++          if server_id && server = connection.get_private_ip(private_ip).body
++            new(server)
++          elsif !server_id
++            nil
++          end
++        rescue Excon::Errors::Forbidden
++          nil
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/server.rb b/lib/fog/compute/models/stormondemand/server.rb
+new file mode 100644
+index 0000000..4dd42c1
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/server.rb
+@@ -0,0 +1,75 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Server < Fog::Model
++        identity :uniq_id
++
++        attribute :accnt
++        attribute :backup_enabled
++        attribute :backup_plan
++        attribute :backup_quota
++        attribute :backup_size
++        attribute :bandwidth_quota
++        attribute :config_description
++        attribute :config_id
++        attribute :create_date
++        attribute :domain
++        attribute :ip
++        attribute :ip_count
++        attribute :manage_level
++        attribute :subaccnt
++        attribute :template
++        attribute :template_description
++        attribute :zone
++        attribute :active
++        
++        attr_writer :password, :username
++
++        def initialize(attributes={})
++          super
++        end
++
++        def create(options)
++          data = connection.create_server(options).body['servers']
++          load(data)
++        end
++
++        def delete(uniq_id = '')
++          requires :identity
++          uniq_id ||= identity
++          connection.delete_server(:uniq_id => uniq_id)
++          true
++        end
++
++        def ready?
++          active == 1
++        end
++
++        def reboot
++          requires :identity
++          connection.reboot_server(:uniq_id => identity)
++          true
++        end
++
++        def username
++          @username ||= 'root'
++        end
++
++        def clone(options)
++          requires :identity
++          connection.clone_server({:uniq_id => identity}.merge!(options))
++          true
++        end
++        def resize(options)
++          requires :identity
++          connection.resize_server({:uniq_id => identity}.merge!(options))
++          true
++        end
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/servers.rb b/lib/fog/compute/models/stormondemand/servers.rb
+new file mode 100644
+index 0000000..58e3ebd
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/servers.rb
+@@ -0,0 +1,26 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/server'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Servers < Fog::Collection
++
++        model Fog::Stormondemand::Compute::Server
++
++        def all
++          data = connection.list_servers.body['servers']
++          load(data)
++        end
++
++        def get(uniq_id)
++          server = connection.get_server(:uniq_id => uniq_id).body
++          new(server)
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/stat.rb b/lib/fog/compute/models/stormondemand/stat.rb
+new file mode 100644
+index 0000000..e282eff
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/stat.rb
+@@ -0,0 +1,23 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Stat < Fog::Model
++        attribute :loadavg
++        attribute :memory
++        attribute :virtual
++        attribute :domain
++        attribute :disk
++        attribute :uptime
++        
++        def initialize(attributes={})
++          super
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/stats.rb b/lib/fog/compute/models/stormondemand/stats.rb
+new file mode 100644
+index 0000000..983c4ed
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/stats.rb
+@@ -0,0 +1,22 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/stat'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Stats < Fog::Collection
++        model Fog::Stormondemand::Compute::Stat
++
++        def get(options)
++          data = connection.get_stats(options).body
++          load(data)
++        rescue Excon::Errors::Forbidden
++          nil
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/template.rb b/lib/fog/compute/models/stormondemand/template.rb
+new file mode 100644
+index 0000000..c43d63f
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/template.rb
+@@ -0,0 +1,22 @@
++require 'fog/core/model'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Template < Fog::Model
++        identity :id
++        attribute :name
++        attribute :description
++        attribute :manage_level
++        attribute :os
++        attribute :price
++      end
++
++      def initialize(attributes={})
++        super
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/models/stormondemand/templates.rb b/lib/fog/compute/models/stormondemand/templates.rb
+new file mode 100644
+index 0000000..2f297a5
+--- /dev/null
++++ b/lib/fog/compute/models/stormondemand/templates.rb
+@@ -0,0 +1,21 @@
++require 'fog/core/collection'
++require 'fog/compute/models/stormondemand/template'
++
++module Fog
++  module Stormondemand
++    class Compute
++
++      class Templates < Fog::Collection
++
++        model Fog::Stormondemand::Compute::Template
++
++        def all
++          data = connection.list_templates.body['templates']
++          load(data)
++        end
++
++      end
++
++    end
++  end
++end
+diff --git a/lib/fog/compute/requests/stormondemand/add_balancer_node.rb b/lib/fog/compute/requests/stormondemand/add_balancer_node.rb
+new file mode 100644
+index 0000000..e2093cb
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/add_balancer_node.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def add_balancer_node(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/network/loadbalancer/addnode",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/clone_server.rb b/lib/fog/compute/requests/stormondemand/clone_server.rb
+new file mode 100644
+index 0000000..40ac51e
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/clone_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def clone_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/clone",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/create_server.rb b/lib/fog/compute/requests/stormondemand/create_server.rb
+new file mode 100644
+index 0000000..603ace7
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/create_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def create_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/create",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/delete_server.rb b/lib/fog/compute/requests/stormondemand/delete_server.rb
+new file mode 100644
+index 0000000..c6624dd
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/delete_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def delete_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/destroy",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/get_server.rb b/lib/fog/compute/requests/stormondemand/get_server.rb
+new file mode 100644
+index 0000000..63e4d8d
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/get_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def get_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/details",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/get_stats.rb b/lib/fog/compute/requests/stormondemand/get_stats.rb
+new file mode 100644
+index 0000000..a70857e
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/get_stats.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def get_stats(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/monitoring/load/stats",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/list_balancers.rb b/lib/fog/compute/requests/stormondemand/list_balancers.rb
+new file mode 100644
+index 0000000..cf12064
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/list_balancers.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def list_balancers(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/network/loadbalancer/list",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => options.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/list_configs.rb b/lib/fog/compute/requests/stormondemand/list_configs.rb
+new file mode 100644
+index 0000000..349eeb6
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/list_configs.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def list_configs(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/config/list",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => options.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/list_images.rb b/lib/fog/compute/requests/stormondemand/list_images.rb
+new file mode 100644
+index 0000000..c5f3d79
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/list_images.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def list_images(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/server/image/list",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => options.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/list_private_ips.rb b/lib/fog/compute/requests/stormondemand/list_private_ips.rb
+new file mode 100644
+index 0000000..db9bf9b
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/list_private_ips.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def list_private_ips(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/network/private/get",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => options.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/list_servers.rb b/lib/fog/compute/requests/stormondemand/list_servers.rb
+new file mode 100644
+index 0000000..4392bc8
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/list_servers.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def list_servers(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/list",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => options.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/list_templates.rb b/lib/fog/compute/requests/stormondemand/list_templates.rb
+new file mode 100644
+index 0000000..ecba245
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/list_templates.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def list_templates(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/server/template/list",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => options.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/reboot_server.rb b/lib/fog/compute/requests/stormondemand/reboot_server.rb
+new file mode 100644
+index 0000000..35276ad
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/reboot_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def reboot_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/reboot",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/remove_balancer_node.rb b/lib/fog/compute/requests/stormondemand/remove_balancer_node.rb
+new file mode 100644
+index 0000000..fd30639
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/remove_balancer_node.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def remove_balancer_node(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/network/loadbalancer/removenode",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/requests/stormondemand/resize_server.rb b/lib/fog/compute/requests/stormondemand/resize_server.rb
+new file mode 100644
+index 0000000..d3221ac
+--- /dev/null
++++ b/lib/fog/compute/requests/stormondemand/resize_server.rb
+@@ -0,0 +1,19 @@
++module Fog
++  module Stormondemand
++    class Compute
++      class Real
++
++        def resize_server(options = {})
++          request(
++            :expects  => [200],
++            :method   => 'GET',
++            :path     => "/storm/server/resize",
++            :headers  => {"Content-Type" => "application/json"},
++            :body     => {:params => options}.to_json
++          )
++        end
++
++      end
++    end
++  end
++end
+\ No newline at end of file
+diff --git a/lib/fog/compute/stormondemand.rb b/lib/fog/compute/stormondemand.rb
+new file mode 100644
+index 0000000..5443d10
+--- /dev/null
++++ b/lib/fog/compute/stormondemand.rb
+@@ -0,0 +1,124 @@
++module Fog
++  module Stormondemand
++    class Compute < Fog::Service
++      
++      API_URL = 'https://api.stormondemand.com'
++      
++      requires :stormondemand_username, :stormondemand_password
++      recognizes :stormondemand_auth_url
++      recognizes :provider # remove post deprecation
++
++      model_path 'fog/compute/models/stormondemand'
++      model       :config
++      collection  :configs
++      model       :image
++      collection  :images
++      model       :server
++      collection  :servers
++      model       :balancer
++      collection  :balancers
++      model       :private_ip
++      collection  :private_ips
++      model       :stat
++      collection  :stats
++      model       :template
++      collection  :templates
++
++      request_path 'fog/compute/requests/stormondemand'
++      request :clone_server
++      request :delete_server
++      request :reboot_server
++      request :list_servers
++      request :get_server
++      request :create_server
++      request :resize_server
++      request :remove_balancer_node
++      request :add_balancer_node
++      request :list_balancers
++      request :list_configs
++      request :list_templates
++      request :list_images
++      
++      # possibly broken, needs testing with monitored instance
++      request :get_stats
++      
++      # broken:
++      request :list_private_ips      
++      
++      class Mock
++
++        def self.data
++          @data ||= Hash.new do |hash, key|
++            hash[key] = {
++              :last_modified => {
++                :images  => {},
++                :servers => {}
++              },
++              :images  => {},
++              :servers => {}
++            }
++          end
++        end
++
++        def self.reset_data(keys=data.keys)
++          for key in [*keys]
++            data.delete(key)
++          end
++        end
++
++        def initialize(options={})
++          @stormondemand_username = options[:stormondemand_username]
++          @data = self.class.data[@stormondemand_username]
++        end
++
++      end
++
++      class Real
++
++        def initialize(options={})
++          require 'json'
++          uri = URI.parse(options[:stormondemand_auth_url] ||= API_URL)
++          @host   = uri.host
++          @path   = uri.path
++          @port   = uri.port
++          @scheme = uri.scheme
++          @stormondemand_username = options[:stormondemand_username]
++          @stormondemand_password = options[:stormondemand_password]
++          @connection = Fog::Connection.new("#{@scheme}://#{@host}:#{@port}")
++        end
++
++        def reload
++          @connection.reset
++        end
++
++        def request(params)
++          begin
++            response = @connection.request(params.merge!({
++              :headers  => {
++                'Content-Type' => 'application/json',
++                'Authorization' => "Basic " + Base64.encode64("#{@stormondemand_username}:#{@stormondemand_password}").chomp
++              }.merge!(params[:headers] || {}),
++              :host     => @host,
++              :path     => "#{@path}/#{params[:path]}"
++            }))
++          rescue Excon::Errors::HTTPStatusError => error
++            raise case error
++            when Excon::Errors::NotFound
++              Fog::StormOnDemand::Compute::NotFound.slurp(error)
++            else
++              error
++            end
++          end
++          unless response.body.empty?
++            response.body = JSON.parse(response.body)
++          end
++          if response.body.keys[0] == 'error_class'
++            raise Fog::Stormondemand::Compute::Error, response.body.inspect
++          end
++          response
++        end
++
++      end
++    end
++  end
++end
+diff --git a/lib/fog/core/credentials.rb b/lib/fog/core/credentials.rb
+index e36fc03..8bc9d26 100644
+--- a/lib/fog/core/credentials.rb
++++ b/lib/fog/core/credentials.rb
+@@ -90,6 +90,8 @@ An alternate file may be used by placing its path in the FOG_RC environment vari
+   :rackspace_servicenet:
+   :rackspace_cdn_ssl:
+   :slicehost_password:
++  :stormondemand_username:
++  :stormondemand_password:
+   :terremark_username:
+   :terremark_password:
+   :voxel_api_key:
+diff --git a/lib/fog/providers.rb b/lib/fog/providers.rb
+index 0edd230..6c98ea3 100644
+--- a/lib/fog/providers.rb
++++ b/lib/fog/providers.rb
+@@ -18,6 +18,7 @@ require 'fog/providers/local'
+ require 'fog/providers/new_servers'
+ require 'fog/providers/rackspace'
+ require 'fog/providers/slicehost'
++require 'fog/providers/stormondemand'
+ require 'fog/providers/virtual_box'
+ require 'fog/providers/voxel'
+ require 'fog/providers/zerigo'
+diff --git a/lib/fog/providers/stormondemand.rb b/lib/fog/providers/stormondemand.rb
+new file mode 100644
+index 0000000..089cf17
+--- /dev/null
++++ b/lib/fog/providers/stormondemand.rb
+@@ -0,0 +1,12 @@
++require 'fog/core'
++
++module Fog
++  module Stormondemand
++
++    extend Fog::Provider
++
++    service(:compute, 'compute/stormondemand')
++
++  end
++end
++
+diff --git a/tests/compute/requests/stormondemand/server_tests.rb b/tests/compute/requests/stormondemand/server_tests.rb
+new file mode 100644
+index 0000000..dbf35fa
+--- /dev/null
++++ b/tests/compute/requests/stormondemand/server_tests.rb
+@@ -0,0 +1,62 @@
++Shindo.tests('Stormondemand::Compute | server requests', ['stormondemand']) do
++
++  @servers_format = {
++    'servers'  => [{
++      'uniq_id'     => String,
++      'accnt'       => String,
++      'backup_enabled'     => String, #boolean?
++      'backup_plan'     => String,
++      'backup_size'     => String,
++      'backup_quota'     => String,
++      'bandwidth_quota' => Integer,
++      'config_description'     => String,
++      'config_id'     => String,
++      'domain'     => String,
++      'ip'     => String,
++      'ip_count'     => String,
++      'subaccnt'     => String,
++      'template'     => String,
++      'template_description'     => String,
++      'manage_level'     => String,
++      'zone'     => Hash,
++      'active' => Integer,
++      'create_date' => String
++    }]
++  }
++
++  tests('success') do
++
++    @uniq_id = nil
++    @name = "fog-test#{Time.now.to_i}.com"
++
++    tests("#create_server(:backup_enabled => 0, :config_id => 114, :domain => '#{@name}', :template => 'CENTOSUNMANAGED', :ip_count => 1, :password => 'B92bxfijsdK3!')").formats(@servers_format) do
++      pending if Fog.mocking?
++      data = Stormondemand[:compute].create_server(:backup_enabled => 0,  :config_id => 114, :domain => @name, :template => 'CENTOSUNMANAGED', :ip_count => 1, :password => 'B92bxfijsdK3!').body
++      @uniq_id = data['uniq_id']
++      data
++    end
++
++    unless Fog.mocking?
++      Stormondemand[:compute].servers.get(@server_id).wait_for { ready? }
++    end
++
++    tests("#delete_server(#{@uniq_id})").succeeds do
++      pending if Fog.mocking?
++      Stormondemand[:compute].delete_server(@uniq_id)
++    end
++
++    tests('#list_servers').formats(@server_format) do
++      pending if Fog.mocking?
++      Stormondemand[:compute].list_servers.body
++    end
++
++  end
++
++  tests('failure') do
++    tests('#delete_server(0)').raises(Fog::Stormondemand::Compute::Error) do
++      pending if Fog.mocking?
++      Stormondemand[:compute].delete_server(0)
++    end
++  end
++
++end
+diff --git a/tests/helper.rb b/tests/helper.rb
+index ce7c8b0..224f3eb 100644
+--- a/tests/helper.rb
++++ b/tests/helper.rb
+@@ -8,7 +8,7 @@ def lorem_file
+ end
+ 
+ # check to see which credentials are available and add others to the skipped tags list
+-all_providers = ['aws', 'bluebox', 'brightbox', 'dnsimple', 'ecloud', 'gogrid', 'google', 'linode', 'local', 'newservers', 'rackspace', 'slicehost', 'voxel', 'zerigo']
++all_providers = ['aws', 'bluebox', 'brightbox', 'dnsimple', 'ecloud', 'gogrid', 'google', 'linode', 'local', 'newservers', 'rackspace', 'slicehost', 'stormondemand', 'voxel', 'zerigo']
+ available_providers = Fog.providers.map {|provider| provider.downcase}
+ for provider in (all_providers - available_providers)
+   Formatador.display_line("[yellow]Skipping tests for [bold]#{provider}[/] [yellow]due to lacking credentials (add some to '~/.fog' to run them)[/]")
+-- 
+1.7.3.5
+
